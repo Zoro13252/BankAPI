@@ -1,4 +1,5 @@
-﻿using BankAPI.Data;
+﻿using BCrypt.Net;
+using BankAPI.Data;
 using BankAPI.DTOs;
 using BankAPI.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -15,10 +16,19 @@ namespace BankAPI.Services
             this.context = context;
         }
 
-        public async Task<User> Get(int id)
+        public async Task<CreateUserDto> Get(int id)
         {
             var user = await this.context.Users.FindAsync(id);
-            return user;
+            var response = new CreateUserDto
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Phone = user.PhoneNumber
+                
+            };
+
+            return (response);
         }
 
         public async Task<ActionResult<CreateUserDto>> CreateUser([FromBody] CreateUserDto dto)
@@ -29,7 +39,7 @@ namespace BankAPI.Services
                 FirstName = dto.FirstName,
                 Email = dto.Email,
                 PhoneNumber = dto.Phone,
-                PasswordHash = dto.Password,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 CreatedAt = DateTime.UtcNow,
 
                 Accounts = new List<Account>
@@ -55,7 +65,18 @@ namespace BankAPI.Services
             };
 
             await this.context.Users.AddAsync(newUser);
-            await this.context.SaveChangesAsync();
+            try
+            {
+                await this.context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // Настоящая причина здесь:
+                var innerException = ex.InnerException;
+
+                // Для отладки можно вывести на консоль:
+                Console.WriteLine(innerException?.Message);
+            }
 
             return (response);
         }
@@ -95,5 +116,7 @@ namespace BankAPI.Services
             await this.context.SaveChangesAsync();
             return $"User by ID {id} deleted";
         }
+
+
     }
 }

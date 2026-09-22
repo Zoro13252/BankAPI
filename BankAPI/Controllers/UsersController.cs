@@ -46,7 +46,7 @@ namespace BankAPI.Controllers
         }
 
         [HttpGet("get{id}")]
-        public async Task<ActionResult<User>> Get(int id)
+        public async Task<ActionResult<CreateUserDto>> Get(int id)
         {
             var user = await this.userService.Get(id);
             return user;
