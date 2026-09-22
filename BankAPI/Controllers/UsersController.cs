@@ -1,58 +1,65 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using BankAPI.Data;
-using BankAPI.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using BankAPI.DTOs;
-using Microsoft.EntityFrameworkCore;
+using BankAPI.Models;
 using BankAPI.Services;
 
-namespace BankAPI.Controllers
+namespace BankAPI.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize] // все эндпоинты требуют JWT
+public class UsersController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class UsersController : ControllerBase
+    private readonly UserService userService;
+
+    public UsersController(UserService userService)
     {
-        private readonly UserService userService;
+        this.userService = userService;
+    }
 
-        public UsersController(BankDbContext context, UserService userService)
-        {
-            this.userService = userService;
-        }
+    [HttpGet("getall")]
+    public async Task<ActionResult<IEnumerable<GetUsersDto>>> GetAll()
+    {
+        var data = await userService.GetAll();
+        return Ok(data);
+    }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
+    [HttpPatch("update")]
+    public async Task<ActionResult<User>> ChangeData([FromBody] ChangeUserDto dto)
+    {
+        try
         {
-            return Ok(await this.userService.CreateUser(dto));
-        }
-
-        [HttpGet("getall")]
-        public async Task<ActionResult<IEnumerable<User>>> GetAll()
-        {
-            var data = await this.userService.GetAll();
+            var data = await userService.ChangeData(dto);
             return Ok(data);
         }
-
-        [HttpPatch("update")]
-        public async Task<ActionResult<User>> ChangeData(ChangeUserDto dto)
+        catch (Exception ex)
         {
-            var data = await this.userService.ChangeData(dto);
-            return Ok(data);
+            return NotFound(new { message = ex.Message });
         }
+    }
 
-        [HttpDelete]
-        public async Task<IActionResult> DeletUserAsync(int id)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        try
         {
-            var data = await this.userService.DeletUserAsync(id);
-            return Ok(data);
+            var result = await userService.DeletUserAsync(id);
+            return Ok(new { message = result });
         }
-
-        [HttpGet("get{id}")]
-        public async Task<ActionResult<CreateUserDto>> Get(int id)
+        catch (Exception ex)
         {
-            var user = await this.userService.Get(id);
-            return user;
+            return NotFound(new { message = ex.Message });
         }
+    }
 
+    [HttpGet("{id}")]
+    public async Task<ActionResult<CreateUserDto>> Get(int id)
+    {
+        var user = await userService.Get(id);
+        if (user == null)
+            return NotFound(new { message = "Пользователь не найден" });
 
-
+        return Ok(user);
     }
 }

@@ -1,122 +1,151 @@
-﻿using BCrypt.Net;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using BankAPI.Data;
 using BankAPI.DTOs;
 using BankAPI.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
-namespace BankAPI.Services
+namespace BankAPI.Services;
+
+public class UserService
 {
-    public class UserService
+    private readonly BankDbContext context;
+    private readonly IConfiguration config;
+
+    public UserService(BankDbContext context, IConfiguration config)
     {
-        private readonly BankDbContext context;
-        public UserService(BankDbContext context)
-        {
-            this.context = context;
-        }
+        this.context = context;
+        this.config = config;
+    }
 
-        public async Task<CreateUserDto> Get(int id)
+    public async Task<CreateUserDto?> Get(int id)
+    {
+        var user = await context.Users.FindAsync(id);
+        if (user == null) return null;
+
+        return new CreateUserDto
         {
-            var user = await this.context.Users.FindAsync(id);
-            var response = new CreateUserDto
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Phone = user.PhoneNumber
+        };
+    }
+
+    /// <summary>
+    /// Регистрация нового пользователя + возврат JWT
+    /// </summary>
+    public async Task<AuthResponseDto> Register(CreateUserDto dto)
+    {
+        if (await context.Users.AnyAsync(u => u.Email == dto.Email))
+            throw new Exception("Email уже занят");
+
+        var newUser = new User
+        {
+            LastName = dto.LastName,
+            FirstName = dto.FirstName,
+            Email = dto.Email,
+            PhoneNumber = dto.Phone ?? string.Empty,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            CreatedAt = DateTime.UtcNow,
+            Accounts = new List<Account>
             {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Phone = user.PhoneNumber
-                
-            };
-
-            return (response);
-        }
-
-        public async Task<ActionResult<CreateUserDto>> CreateUser([FromBody] CreateUserDto dto)
-        {
-            var newUser = new User
-            {
-                LastName = dto.LastName,
-                FirstName = dto.FirstName,
-                Email = dto.Email,
-                PhoneNumber = dto.Phone,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                CreatedAt = DateTime.UtcNow,
-
-                Accounts = new List<Account>
+                new Account
                 {
-                    new Account
-                    {
-                        AccountNumber = dto.Account.AccountNumber,
-                        Balance = dto.Account.Balance,
-                        Currency = dto.Account.Currency
-                    }
+                    AccountNumber = dto.Account.AccountNumber,
+                    Balance = dto.Account.Balance,
+                    Currency = dto.Account.Currency
                 }
-            };
-
-            
-
-            var response = new CreateUserDto
-            {
-                LastName = newUser.LastName,
-                FirstName = newUser.FirstName,
-                Email = newUser.Email
-                
-
-            };
-
-            await this.context.Users.AddAsync(newUser);
-            try
-            {
-                await this.context.SaveChangesAsync();
             }
-            catch (DbUpdateException ex)
-            {
-                // Настоящая причина здесь:
-                var innerException = ex.InnerException;
+        };
 
-                // Для отладки можно вывести на консоль:
-                Console.WriteLine(innerException?.Message);
-            }
+        await context.Users.AddAsync(newUser);
+        await context.SaveChangesAsync();
 
-            return (response);
-        }
+        return GenerateToken(newUser);
+    }
 
-        public async Task<ActionResult<List<GetUsersDto>>> GetAll()
-        {
-            var result = await this.context.Users.Select(u => new GetUsersDto
+    /// <summary>
+    /// Вход по email + password, возвращает JWT
+    /// </summary>
+    public async Task<AuthResponseDto> Login(LoginDto dto)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            throw new Exception("Неверный email или пароль");
+
+        return GenerateToken(user);
+    }
+
+    public async Task<List<GetUsersDto>> GetAll()
+    {
+        return await context.Users
+            .Select(u => new GetUsersDto
             {
                 Id = u.Id,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 Email = u.Email
-            }).ToListAsync();
-            return (result);
-        }
+            })
+            .ToListAsync();
+    }
 
-        public async Task<ActionResult<User>> ChangeData(ChangeUserDto dto)
+    public async Task<User> ChangeData(ChangeUserDto dto)
+    {
+        var user = await context.Users.FindAsync(dto.userId);
+        if (user == null)
+            throw new Exception("Пользователь с таким ID не найден.");
+
+        if (!string.IsNullOrEmpty(dto.firstName)) user.FirstName = dto.firstName;
+        if (!string.IsNullOrEmpty(dto.lastName)) user.LastName = dto.lastName;
+        if (!string.IsNullOrEmpty(dto.email)) user.Email = dto.email;
+
+        await context.SaveChangesAsync();
+        return user;
+    }
+
+    public async Task<string> DeletUserAsync(int id)
+    {
+        var user = await context.Users.FindAsync(id);
+        if (user == null) throw new Exception("NotFound");
+
+        context.Remove(user);
+        await context.SaveChangesAsync();
+        return $"User by ID {id} deleted";
+    }
+
+    private AuthResponseDto GenerateToken(User user)
+    {
+        var claims = new[]
         {
-            var user = await this.context.Users.FindAsync(dto.userId);
-            if (user == null)
-            {
-                throw new Exception("Пользователь с таким ID не найден.");
-            }
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
+        };
 
-            if (!string.IsNullOrEmpty(dto.firstName)) user.FirstName = dto.firstName;
-            if (!string.IsNullOrEmpty(dto.lastName)) user.LastName = dto.lastName;
-            if (!string.IsNullOrEmpty(dto.email)) user.Email = dto.email;
-            await this.context.SaveChangesAsync();
-            return (user);
-        }
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        public async Task<ActionResult<string>> DeletUserAsync(int id)
+        var expireMinutes = int.Parse(config["Jwt:ExpireMinutes"] ?? "60");
+
+        var token = new JwtSecurityToken(
+            issuer: config["Jwt:Issuer"],
+            audience: config["Jwt:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(expireMinutes),
+            signingCredentials: creds);
+
+        return new AuthResponseDto
         {
-            var user = await this.context.Users.FindAsync(id);
-            if (user == null) throw new Exception("NotFound");
-            this.context.Remove(user);
-            await this.context.SaveChangesAsync();
-            return $"User by ID {id} deleted";
-        }
-
-
+            Token = new JwtSecurityTokenHandler().WriteToken(token),
+            UserId = user.Id,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName
+        };
     }
 }
