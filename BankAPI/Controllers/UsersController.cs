@@ -8,7 +8,7 @@ namespace BankAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // все эндпоинты требуют JWT
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly UserService userService;
