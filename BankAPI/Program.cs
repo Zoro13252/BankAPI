@@ -46,6 +46,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<TransferService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 

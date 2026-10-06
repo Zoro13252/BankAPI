@@ -3,19 +3,23 @@ using Microsoft.AspNetCore.Mvc;
 using BankAPI.DTOs;
 using BankAPI.Models;
 using BankAPI.Services;
+using BankAPI.DTOs.TransferDTOs;
+using System.Security.Claims;
 
 namespace BankAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+
 public class UsersController : ControllerBase
 {
     private readonly UserService userService;
+    private readonly TransferService transferService;
 
-    public UsersController(UserService userService)
+    public UsersController(UserService userService, TransferService transferService)
     {
         this.userService = userService;
+        this.transferService = transferService;
     }
 
     [HttpGet("getall")]
@@ -24,7 +28,7 @@ public class UsersController : ControllerBase
         var data = await userService.GetAll();
         return Ok(data);
     }
-
+    [Authorize]
     [HttpPatch("update")]
     public async Task<ActionResult<User>> ChangeData([FromBody] ChangeUserDto dto)
     {
@@ -39,6 +43,7 @@ public class UsersController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
@@ -53,13 +58,19 @@ public class UsersController : ControllerBase
         }
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<CreateUserDto>> Get(int id)
+    [Authorize]
+    [HttpPost("transfer")]
+    public async Task<ActionResult> Transfers([FromBody] TransferDto Tdto)
     {
-        var user = await userService.Get(id);
-        if (user == null)
-            return NotFound(new { message = "Пользователь не найден" });
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        return Ok(user);
+        if(string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int fromUserId))
+        {
+            return Unauthorized("Не удалось определить пользователя по токену");
+        }
+
+
+        await transferService.ExecuteTransferAsync(fromUserId, Tdto);
+        return Ok("Перевод успешно выполнен");
     }
 }

@@ -13,9 +13,6 @@ namespace BankAPI.Controllers
     [Authorize]
     public class AccountsController : ControllerBase
     {
-        private readonly BankDbContext context;
-
-        
 
     }
 }

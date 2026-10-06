@@ -21,23 +21,6 @@ public class UserService
         this.config = config;
     }
 
-    public async Task<CreateUserDto?> Get(int id)
-    {
-        var user = await context.Users.FindAsync(id);
-        if (user == null) return null;
-
-        return new CreateUserDto
-        {
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email,
-            Phone = user.PhoneNumber
-        };
-    }
-
-    /// <summary>
-    /// Регистрация нового пользователя + возврат JWT
-    /// </summary>
     public async Task<AuthResponseDto> Register(CreateUserDto dto)
     {
         if (await context.Users.AnyAsync(u => u.Email == dto.Email))
@@ -55,7 +38,7 @@ public class UserService
             {
                 new Account
                 {
-                    AccountNumber = dto.Account.AccountNumber,
+                    AccountNumber = await GenerateCardNumberAsync(),
                     Balance = dto.Account.Balance,
                     Currency = dto.Account.Currency
                 }
@@ -68,9 +51,6 @@ public class UserService
         return GenerateToken(newUser);
     }
 
-    /// <summary>
-    /// Вход по email + password, возвращает JWT
-    /// </summary>
     public async Task<AuthResponseDto> Login(LoginDto dto)
     {
         var user = await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
@@ -89,7 +69,9 @@ public class UserService
                 Id = u.Id,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
-                Email = u.Email
+                Email = u.Email,
+                Balance = u.Accounts.Select(a => a.Balance).FirstOrDefault(),
+                AccountNumber = u.Accounts.Select(a => a.AccountNumber).FirstOrDefault()
             })
             .ToListAsync();
     }
@@ -148,4 +130,25 @@ public class UserService
             LastName = user.LastName
         };
     }
+
+    public async Task<string> GenerateCardNumberAsync()
+    {
+        var random = new Random();
+        string cardNumber;
+        bool isUnique;
+
+        do
+        { 
+            var sb = new StringBuilder();
+            for (int i = 0; i < 16; i++)
+            {
+                sb.Append(random.Next(0, 10));
+            }
+            cardNumber = sb.ToString();
+            isUnique = !await context.Accounts.AnyAsync(a => a.AccountNumber == cardNumber);
+
+        } while (!isUnique); 
+
+        return cardNumber;
+    } 
 }
