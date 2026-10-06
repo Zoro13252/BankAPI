@@ -109,7 +109,7 @@ public class UserService
             new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.config["Jwt:Key"]));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var expireMinutes = int.Parse(config["Jwt:ExpireMinutes"] ?? "60");
@@ -133,22 +133,17 @@ public class UserService
 
     public async Task<string> GenerateCardNumberAsync()
     {
-        var random = new Random();
         string cardNumber;
         bool isUnique;
-
+        var x = new GenerateCardNumberService();
         do
-        { 
-            var sb = new StringBuilder();
-            for (int i = 0; i < 16; i++)
-            {
-                sb.Append(random.Next(0, 10));
-            }
-            cardNumber = sb.ToString();
-            isUnique = !await context.Accounts.AnyAsync(a => a.AccountNumber == cardNumber);
-
-        } while (!isUnique); 
-
+        {
+            string generateNum = x.GenerateCardNumber();
+            isUnique = !await context.Accounts.AnyAsync(a => a.AccountNumber == generateNum);
+            cardNumber = generateNum;
+        } while (!isUnique);
+        
+            
         return cardNumber;
     } 
 }

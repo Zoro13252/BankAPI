@@ -13,15 +13,15 @@ builder.Services.AddDbContext<BankDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DataBase")));
 
 // CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAll", policy =>
+//    {
+//        policy.AllowAnyOrigin()
+//              .AllowAnyMethod()
+//              .AllowAnyHeader();
+//    });
+//});
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]
