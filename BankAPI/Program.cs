@@ -1,5 +1,6 @@
 using BankAPI.Data;
 using BankAPI.Services;
+using BankAPI.Workers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<BankDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DataBase")));
 
-// CORS
+//CORS
 //builder.Services.AddCors(options =>
 //{
 //    options.AddPolicy("AllowAll", policy =>
@@ -71,6 +72,8 @@ builder.Services.AddSwaggerGen(options =>
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
 });
+
+builder.Services.AddHostedService<MyBackgroundWorker>();
 
 var app = builder.Build();
 

@@ -22,6 +22,7 @@ public class UsersController : ControllerBase
         this.transferService = transferService;
     }
 
+    [Authorize(Roles = "PremiumUser")]
     [HttpGet("getall")]
     public async Task<ActionResult<IEnumerable<GetUsersDto>>> GetAll()
     {
@@ -43,7 +44,7 @@ public class UsersController : ControllerBase
         }
     }
 
-    [Authorize]
+    [Authorize(Roles = "PremiumUser")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {

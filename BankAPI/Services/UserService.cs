@@ -28,6 +28,7 @@ public class UserService
 
         var newUser = new User
         {
+            UserRole = User.Role.PremiumUser,
             LastName = dto.LastName,
             FirstName = dto.FirstName,
             Email = dto.Email,
@@ -104,6 +105,7 @@ public class UserService
     {
         var claims = new[]
         {
+            new Claim(ClaimTypes.Role, user.UserRole.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")

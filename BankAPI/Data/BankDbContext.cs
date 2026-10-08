@@ -18,6 +18,9 @@ namespace BankAPI.Data
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<User>()
+            .Property(u => u.UserRole)
+            .HasConversion<string>();
             modelBuilder.Entity<Transaction>()
                 .HasOne(t => t.UserFrom)
                 .WithMany(u => u.SentTransactions)
