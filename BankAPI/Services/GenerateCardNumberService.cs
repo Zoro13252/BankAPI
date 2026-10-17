@@ -3,7 +3,7 @@ namespace BankAPI.Services
 {
     public class GenerateCardNumberService
     {
-        string bin = "2200";
+        readonly string bin = "2200";
         public string GenerateCardNumber()
         {
             int[] res = new int[9];

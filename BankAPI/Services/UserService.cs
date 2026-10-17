@@ -24,7 +24,7 @@ public class UserService
     public async Task<AuthResponseDto> Register(CreateUserDto dto)
     {
         if (await context.Users.AnyAsync(u => u.Email == dto.Email))
-            throw new Exception("Email уже занят");
+            throw new ArgumentNullException("Email уже занят");
 
         var newUser = new User
         {
@@ -57,7 +57,7 @@ public class UserService
         var user = await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-            throw new Exception("Неверный email или пароль");
+            throw new ArgumentNullException("Неверный email или пароль");
 
         return GenerateToken(user);
     }
@@ -81,7 +81,7 @@ public class UserService
     {
         var user = await context.Users.FindAsync(dto.userId);
         if (user == null)
-            throw new Exception("Пользователь с таким ID не найден.");
+            throw new ArgumentNullException("Пользователь с таким ID не найден.");
 
         if (!string.IsNullOrEmpty(dto.firstName)) user.FirstName = dto.firstName;
         if (!string.IsNullOrEmpty(dto.lastName)) user.LastName = dto.lastName;
@@ -94,7 +94,7 @@ public class UserService
     public async Task<string> DeletUserAsync(int id)
     {
         var user = await context.Users.FindAsync(id);
-        if (user == null) throw new Exception("NotFound");
+        if (user == null) throw new ArgumentNullException("Не найден");
 
         context.Remove(user);
         await context.SaveChangesAsync();

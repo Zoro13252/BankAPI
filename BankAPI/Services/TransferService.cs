@@ -36,8 +36,8 @@ namespace BankAPI.Services
                 if (userTo.Accounts == null || !userTo.Accounts.Any())
                     return ServiceResult.Fail("У пользователя нет активных счетов");
 
-                var accBalanceUserFrom = userFrom.Accounts.First();
-                var accBalanceUserTo = userTo.Accounts.First();
+                var accBalanceUserFrom = userFrom.Accounts[0];
+                var accBalanceUserTo = userTo.Accounts[0];
 
                 
                 if (accBalanceUserFrom.Balance < dto.amount)

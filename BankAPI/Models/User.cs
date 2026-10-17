@@ -24,10 +24,5 @@
         public ICollection<Transaction> ReceivedTransactions { get; set; }
 
         public List<Account> Accounts { get; set; } = new();
-
-        void ChangeData()
-        {
-            
-        }
     }
 
