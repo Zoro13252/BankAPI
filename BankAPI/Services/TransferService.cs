@@ -48,7 +48,15 @@ namespace BankAPI.Services
                 
                 accBalanceUserFrom.Balance -= dto.amount;
                 accBalanceUserTo.Balance += dto.amount;
+                var transactionRecord = new Transaction
+                {
+                    Value = dto.amount,
+                    UserFromId = fromUserId,
+                    UserToId = userTo.Id,
+                    ExecutedIn = DateTime.UtcNow
+                };
 
+                context.Transaction.Add(transactionRecord);
                 await this.context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return ServiceResult.Ok();
@@ -59,5 +67,7 @@ namespace BankAPI.Services
                 throw;
             }
         }
+
+
     }
 }

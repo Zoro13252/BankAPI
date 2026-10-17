@@ -16,7 +16,7 @@ namespace BankAPI.Workers
             while (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Воркер работает: {time}", DateTimeOffset.Now);
-                await Task.Delay(5000, stoppingToken);
+                await Task.Delay(10000, stoppingToken);
             }
         }
     }
